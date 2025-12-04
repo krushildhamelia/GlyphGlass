@@ -49,6 +49,15 @@ export interface FontStyle {
   complexity: 'Low' | 'Medium' | 'High';
 }
 
+export type ColorThemeId = 'plain' | 'neon' | 'fire' | 'matrix' | 'ocean' | 'rainbow' | 'sunset' | 'candy';
+
+export interface ColorTheme {
+  id: ColorThemeId;
+  name: string;
+  gradient: string; // Tailwind class for Web Preview
+  description: string;
+}
+
 export interface ToastMessage {
   id: string;
   message: string;

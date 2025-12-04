@@ -1,16 +1,19 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FONT_STYLES } from './constants';
-import { FontStyle } from './types';
-import { generateAsciiArtLocal } from './services/asciiService';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { FONT_STYLES, COLOR_THEMES } from './constants';
+import { FontStyle, ColorTheme } from './types';
+import { generateAsciiArtLocal, applyAnsiTheme } from './services/asciiService';
 import Background from './components/Background';
 import GlassCard from './components/GlassCard';
 import FontSelector from './components/FontSelector';
-import { Copy, Sparkles, Wand2, Terminal, AlignLeft, Keyboard, Zap } from 'lucide-react';
+import ColorSelector from './components/ColorSelector';
+import { Copy, Sparkles, Wand2, Terminal, AlignLeft, Keyboard, Zap, Command, Download } from 'lucide-react';
 
 const App: React.FC = () => {
   // State
   const [inputText, setInputText] = useState<string>('NEON');
   const [selectedFont, setSelectedFont] = useState<FontStyle>(FONT_STYLES[0]);
+  const [selectedTheme, setSelectedTheme] = useState<ColorTheme>(COLOR_THEMES[1]); // Default to Neon
   const [outputAscii, setOutputAscii] = useState<string>('');
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
@@ -47,13 +50,43 @@ const App: React.FC = () => {
   const handleCopy = useCallback(async () => {
     if (!outputAscii) return;
     try {
-      await navigator.clipboard.writeText(outputAscii);
+      // If a specific theme is selected (not plain), generate the ANSI code
+      let textToCopy = outputAscii;
+      if (selectedTheme.id !== 'plain') {
+        textToCopy = applyAnsiTheme(outputAscii, selectedTheme.id);
+        console.log("%c[GlyphGlass] ANSI copied! For best results on Windows, use the DOWNLOAD button to avoid encoding issues.", "color: #e879f9");
+      }
+      
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy', err);
     }
-  }, [outputAscii]);
+  }, [outputAscii, selectedTheme]);
+
+  const handleDownload = useCallback(() => {
+    if (!outputAscii) return;
+    
+    let textContent = outputAscii;
+    if (selectedTheme.id !== 'plain') {
+      textContent = applyAnsiTheme(outputAscii, selectedTheme.id);
+    }
+
+    // Create a Blob with UTF-8 charset
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    // Sanitize filename
+    const safeText = inputText.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.download = `glyphglass_${safeText || 'art'}.txt`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [outputAscii, selectedTheme, inputText]);
 
   return (
     <main className="relative min-h-screen h-screen overflow-hidden text-indigo-50 font-sans selection:bg-fuchsia-500/30 selection:text-fuchsia-200">
@@ -69,9 +102,9 @@ const App: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                GlyphGlass <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/20 tracking-wide font-bold">V 2.0</span>
+                GlyphGlass <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/20 tracking-wide font-bold">V 2.6</span>
               </h1>
-              <p className="text-xs text-indigo-300 font-medium">Next-Gen ASCII Generator</p>
+              <p className="text-xs text-indigo-300 font-medium">Next-Gen ASCII & ANSI Generator</p>
             </div>
           </div>
           
@@ -106,6 +139,16 @@ const App: React.FC = () => {
                 />
                 <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent opacity-50 group-focus-within:opacity-100 transition-opacity" />
               </GlassCard>
+            </div>
+            
+            {/* Color Selector */}
+            <div className="flex-none">
+               <GlassCard className="p-4">
+                 <ColorSelector 
+                    selectedThemeId={selectedTheme.id}
+                    onSelect={setSelectedTheme}
+                 />
+               </GlassCard>
             </div>
 
             {/* Scrollable Font List */}
@@ -145,18 +188,32 @@ const App: React.FC = () => {
                       </span>
                     )}
                  </div>
-                 <button
-                   onClick={handleCopy}
-                   className="group relative flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] active:scale-95"
-                 >
-                   <Copy className="w-4 h-4" />
-                   <span>Copy ASCII</span>
-                   <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                 </button>
+                 
+                 <div className="flex items-center gap-2">
+                    {/* Download Button */}
+                    <button
+                      onClick={handleDownload}
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-white/10 hover:border-white/30 text-indigo-200 font-bold text-sm rounded-xl transition-all active:scale-95"
+                      title="Save as .txt file (Best for Windows)"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Save .txt</span>
+                    </button>
+
+                    {/* Copy Button */}
+                    <button
+                      onClick={handleCopy}
+                      className="group relative flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] active:scale-95"
+                    >
+                      {selectedTheme.id === 'plain' ? <Copy className="w-4 h-4" /> : <Command className="w-4 h-4" />}
+                      <span>{selectedTheme.id === 'plain' ? 'Copy Text' : `Copy ${selectedTheme.name}`}</span>
+                      <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                 </div>
                </div>
 
                {/* Output Stage */}
-               <div className="flex-1 overflow-auto p-8 flex items-center justify-center bg-black/20 relative">
+               <div className="flex-1 overflow-auto p-8 flex items-center justify-center bg-black/40 relative">
                   {/* Grid lines in background */}
                   <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
 
@@ -166,12 +223,17 @@ const App: React.FC = () => {
                     </div>
                   ) : (
                     <div className="relative group w-full flex justify-center perspective-1000">
-                       {/* Multiple Glow layers */}
-                       <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-fuchsia-500/10 to-cyan-500/10 blur-3xl rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500 pointer-events-none" />
+                       {/* Multiple Glow layers behind text */}
+                       <div className={`absolute inset-0 bg-gradient-to-r ${selectedTheme.gradient} blur-3xl rounded-full opacity-20 group-hover:opacity-30 transition-opacity duration-500 pointer-events-none`} />
                        
                        <pre 
-                        className="relative z-10 font-mono text-xs sm:text-sm md:text-base lg:text-lg leading-none text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 via-white to-fuchsia-100 whitespace-pre text-center select-all cursor-text drop-shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all duration-300"
-                        style={{ fontFamily: '"JetBrains Mono", monospace' }}
+                        className={`relative z-10 font-mono text-xs sm:text-sm md:text-base lg:text-lg leading-none whitespace-pre text-center select-all cursor-text transition-all duration-300
+                          text-transparent bg-clip-text bg-gradient-to-r ${selectedTheme.gradient}
+                        `}
+                        style={{ 
+                           fontFamily: '"JetBrains Mono", monospace',
+                           filter: selectedTheme.id !== 'plain' ? 'drop-shadow(0 0 5px rgba(255,255,255,0.3))' : 'none'
+                        }}
                       >
                         {outputAscii || "..."}
                       </pre>
@@ -180,9 +242,12 @@ const App: React.FC = () => {
                </div>
                
                {/* Info Footer */}
-               <div className="flex-none p-3 border-t border-white/5 text-center bg-black/20">
+               <div className="flex-none p-3 border-t border-white/5 text-center bg-black/20 flex items-center justify-between px-6">
                  <p className="text-[10px] text-indigo-400/60 font-mono">
-                   RENDERED WITH GLYPHGLASS ENGINE • {selectedFont.name.toUpperCase()}
+                   FONT: {selectedFont.name.toUpperCase()}
+                 </p>
+                 <p className="text-[10px] text-indigo-400/60 font-mono">
+                   THEME: {selectedTheme.name.toUpperCase()} {selectedTheme.id !== 'plain' ? '(ANSI ENABLED)' : ''}
                  </p>
                </div>
             </GlassCard>

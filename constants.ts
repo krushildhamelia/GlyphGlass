@@ -1,5 +1,56 @@
 
-import { FontStyle } from './types';
+import { FontStyle, ColorTheme } from './types';
+
+export const COLOR_THEMES: ColorTheme[] = [
+  { 
+    id: 'plain', 
+    name: 'Plain', 
+    gradient: 'from-indigo-100 via-white to-indigo-100',
+    description: 'Standard White'
+  },
+  { 
+    id: 'neon', 
+    name: 'Cyber', 
+    gradient: 'from-cyan-400 via-fuchsia-400 to-purple-400',
+    description: 'Cyan & Purple'
+  },
+  { 
+    id: 'fire', 
+    name: 'Inferno', 
+    gradient: 'from-yellow-400 via-orange-500 to-red-600',
+    description: 'Red & Yellow'
+  },
+  { 
+    id: 'matrix', 
+    name: 'Hacker', 
+    gradient: 'from-green-400 via-emerald-500 to-green-600',
+    description: 'Matrix Green'
+  },
+  { 
+    id: 'ocean', 
+    name: 'Deep Sea', 
+    gradient: 'from-cyan-300 via-blue-500 to-indigo-600',
+    description: 'Blue Depths'
+  },
+  { 
+    id: 'rainbow', 
+    name: 'Prism', 
+    gradient: 'from-red-400 via-green-400 to-blue-400',
+    description: 'Full Spectrum'
+  },
+  { 
+    id: 'sunset', 
+    name: 'Sunset', 
+    gradient: 'from-indigo-400 via-purple-400 to-pink-400',
+    description: 'Dusk Vibes'
+  },
+  { 
+    id: 'candy', 
+    name: 'Cotton', 
+    gradient: 'from-pink-300 via-purple-300 to-cyan-300',
+    description: 'Pastel Dreams'
+  },
+];
 
 export const FONT_STYLES: FontStyle[] = [
   { id: '3d', name: 'ANSI Shadow', description: 'Real 3D', preview: '█', complexity: 'High' },
